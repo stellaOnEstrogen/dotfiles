@@ -16,7 +16,7 @@ I use the [Catppuccin-GTK-Theme](https://github.com/Fausto-Korpsvart/Catppuccin-
 To install my theme setup, simply run this script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/stellaOnEstrogen/dotfiles/machines/personal/scripts/install_theme.sh | bash
+curl -fsSL https://raw.githubusercontent.com/stellaOnEstrogen/dotfiles/main/machines/personal/scripts/install_theme.sh | bash
 ```
 
 ## Extensions
