@@ -35,6 +35,5 @@ Memory: 7014MiB / 31985MiB
 
 ## Applications
 
-- [GNOME](./applications/gnome/README.md)
-- [GTK](./applications/gtk/README.md)
+- [GNOME and GTK](./applications/gnome/README.md)
 - [Zsh](./applications/zsh/README.md)
