@@ -14,7 +14,7 @@ I use the [Oh My Zsh](https://ohmyz.sh/) framework as the foundation of my Zsh s
 To install my zshrc setup, simply run this script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/stellaOnEstrogen/dotfiles/main/machines/personal/scripts/install_zsh.sh | bash
+curl -fsSL https://raw.githubusercontent.com/stellaOnEstrogen/dotfiles/main/machines/personal/scripts/install_zsh.sh | sudo bash
 ```
 
 ## Plugins

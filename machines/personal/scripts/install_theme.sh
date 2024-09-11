@@ -16,6 +16,13 @@ Options:
 EOF
 }
 
+check_if_root() {
+  if [[ $EUID -eq 0 ]]; then
+    echo "Error: This script should not be run as root." 1>&2
+    exit 1
+  fi
+}
+
 # Set the GNOME theme using gsettings
 set_gnome_theme() {
   local theme_name="Catppuccin-Dark"
@@ -88,6 +95,7 @@ parse_arguments() {
 # Entry point
 main() {
   parse_arguments "$@"
+  check_if_root
   check_dependencies
   install_theme
 }
