@@ -1,0 +1,319 @@
+#!/bin/bash
+
+# Package Manager Script
+#
+# This script is a wrapper for various package managers, providing a unified interface
+# for package management across different Linux distributions and macOS.
+#
+# Usage:
+#   ./pkg i, install <package>   - Install a package
+#   ./pkg u, update <package>    - Update a package
+#   ./pkg up, upgrade            - Upgrade all packages
+#   ./pkg r, remove <package>    - Remove a package
+#   ./pkg p, peek <package>      - Peek at package details
+#   ./pkg l, list                - List all installed packages
+#   ./pkg s, search <package>    - Search for a package
+#   ./pkg c, clean               - Clean the package cache
+#   ./pkg h, history             - Show package management history
+#   ./pkg -h, --help             - Display help information
+#   ./pkg -v, --version          - Display version information
+#   ./pkg config                 - Edit configuration file
+#
+# Author: Stella <stellaonestrogen@gmail.com>
+# Version: 1.0
+# Last Updated: 19/9/2024 05:33 AM JST (GMT+9, Tokyo)
+
+# Variables
+VERSION="1.0"
+LAST_UPDATED="19/9/2024 05:33 AM JST (GMT+9, Tokyo)"
+AUTHOR="Stella <stellaonestrogen@gmail.com>"
+GITHUB="https://github.com/stellaOnEstrogen/dotfiles"
+BUG_REPORT="https://github.com/stellaOnEstrogen/dotfiles/issues"
+CONFIG_FILE="$HOME/.pkg_config"
+
+# Load configuration
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+else
+    # Default configuration
+    PREFERRED_PACKAGE_MANAGER=""
+    CUSTOM_INSTALL_COMMAND=""
+    CUSTOM_UPDATE_COMMAND=""
+    CUSTOM_REMOVE_COMMAND=""
+    CUSTOM_SEARCH_COMMAND=""
+    USE_SUDO=true
+fi
+
+# Colors for better output
+declare -A COLORS=(
+    [RED]='\033[0;31m'
+    [GREEN]='\033[0;32m'
+    [YELLOW]='\033[0;33m'
+    [BLUE]='\033[0;34m'
+    [MAGENTA]='\033[0;35m'
+    [CYAN]='\033[0;36m'
+    [WHITE]='\033[0;37m'
+    [NC]='\033[0m'
+)
+
+# Functions
+
+# Print colored text to the console
+# @param $1 Color name (RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE)
+# @param $2 Message to print
+print_color() {
+    local color="${COLORS[$1]}"
+    local message="$2"
+    echo -e "${color}${message}${COLORS[NC]}"
+}
+
+# Print text in rainbow colors
+# @param $1 Message to print
+print_rainbow() {
+    local message="$1"
+    local colors=("${COLORS[RED]}" "${COLORS[GREEN]}" "${COLORS[YELLOW]}" "${COLORS[BLUE]}" "${COLORS[MAGENTA]}" "${COLORS[CYAN]}")
+    local nc="${COLORS[NC]}"
+    local length=${#message}
+    for (( i=0; i<length; i++ )); do
+        local color=${colors[$((i % ${#colors[@]}))]}
+        echo -ne "${color}${message:$i:1}${nc}"
+    done
+    echo
+}
+
+# Find the default package manager for the system
+# @return The name of the default package manager or an error message
+find_default_package_manager() {
+    if [ -n "$PREFERRED_PACKAGE_MANAGER" ]; then
+        echo "$PREFERRED_PACKAGE_MANAGER"
+        return 0
+    fi
+    
+    local package_managers=("dnf" "yum" "pacman" "apt" "zypper" "apk" "brew")
+    for pm in "${package_managers[@]}"; do
+        if command -v "$pm" &>/dev/null; then
+            echo "$pm"
+            return 0
+        fi
+    done
+    
+    echo "No supported package manager found"
+    return 1
+}
+
+# Look up a package using the default package manager
+# @param $1 Package name to look up
+# @return The name of the package manager if the package is found, or 1 if not found
+lookup_package() {
+    local package=$1
+    local default_pm=$(find_default_package_manager)
+    if [ $? -eq 0 ]; then
+        if $default_pm info "$package" &>/dev/null; then
+            echo "$default_pm"
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# Execute a package action (install, update, remove)
+# @param $1 Action to perform (install, update, remove)
+# @param $2 Package name
+execute_package_action() {
+    local action=$1
+    local package=$2
+    local package_manager=$(lookup_package "$package")
+    if [ $? -eq 0 ]; then
+        print_color YELLOW "${action^}ing package: $package"
+        local cmd=""
+        case "$action" in
+            install) cmd="${CUSTOM_INSTALL_COMMAND:-"$package_manager $action $package -y"}" ;;
+            update) cmd="${CUSTOM_UPDATE_COMMAND:-"$package_manager $action $package -y"}" ;;
+            remove) cmd="${CUSTOM_REMOVE_COMMAND:-"$package_manager $action $package -y"}" ;;
+        esac
+        if $USE_SUDO; then
+            sudo $cmd
+        else
+            $cmd
+        fi
+        if [ $? -eq 0 ]; then
+            print_color GREEN "Package $package ${action}ed successfully"
+        else
+            print_color RED "Failed to $action package $package"
+        fi
+    else
+        print_color RED "Package $package not found"
+    fi
+}
+
+# Install a package
+# @param $1 Package name to install
+install_package() { execute_package_action "install" "$1"; }
+
+# Update a package
+# @param $1 Package name to update
+update_package() { execute_package_action "update" "$1"; }
+
+# Upgrade all packages
+upgrade_packages() { 
+    local default_pm=$(find_default_package_manager)
+    print_color YELLOW "Upgrading all packages..."
+    local cmd="${CUSTOM_UPDATE_COMMAND:-"$default_pm upgrade -y"}"
+    if $USE_SUDO; then
+        sudo $cmd
+    else
+        $cmd
+    fi
+    if [ $? -eq 0 ]; then
+        print_color GREEN "All packages upgraded successfully"
+    else
+        print_color RED "Failed to upgrade packages"
+    fi
+}
+
+# Remove a package
+# @param $1 Package name to remove
+remove_package() { execute_package_action "remove" "$1"; }
+
+# Display detailed information about a package
+# @param $1 Package name to peek
+peek_package() {
+    local package=$1
+    if [ -z "$package" ]; then
+        print_color RED "Usage: $0 peek <package>"
+        exit 1
+    fi
+    local package_manager=$(lookup_package "$package")
+    if [ $? -eq 0 ]; then
+        print_color BLUE "Package Information for $package:"
+        echo "----------------------------------------"
+        "$package_manager" info "$package" | sed -e "s/^/  /"
+        echo "----------------------------------------"
+    else
+        print_color RED "Package $package not found"
+    fi
+}
+
+# List all installed packages
+list_packages() {
+    local default_pm=$(find_default_package_manager)
+    print_color BLUE "Installed Packages:"
+    echo "----------------------------------------"
+    $default_pm list installed | sed 1d | awk '{printf "  %-40s %-20s %s\n", $1, $2, $3}'
+    echo "----------------------------------------"
+}
+
+# Search for a package
+# @param $1 Package name to search for
+search_package() {
+    local package=$1
+    local default_pm=$(find_default_package_manager)
+    print_color BLUE "Searching for package: $package"
+    echo "----------------------------------------"
+    local cmd="${CUSTOM_SEARCH_COMMAND:-"$default_pm search $package"}"
+    $cmd | sed -e "s/^/  /"
+    echo "----------------------------------------"
+}
+
+# Clean the package cache
+clean_cache() {
+    local default_pm=$(find_default_package_manager)
+    print_color YELLOW "Cleaning package cache..."
+    if $USE_SUDO; then
+        sudo $default_pm clean all
+    else
+        $default_pm clean all
+    fi
+    print_color GREEN "Package cache cleaned successfully"
+}
+
+# Show package management history
+show_history() {
+    local default_pm=$(find_default_package_manager)
+    print_color BLUE "Package Management History:"
+    echo "----------------------------------------"
+    $default_pm history | sed -e "s/^/  /"
+    echo "----------------------------------------"
+}
+
+# Display help information
+display_help() {
+    local BLUE=$(tput setaf 4)
+    local GREEN=$(tput setaf 2)
+    local YELLOW=$(tput setaf 3)
+    local NC=$(tput sgr0)
+
+    cat << EOF
+${BLUE}Usage: $0 [OPTION]${NC}
+This script is a wrapper for various package managers, providing a unified interface
+for package management across different Linux distributions and macOS.
+
+${GREEN}Options:${NC}
+  i, install <package>    Install a package
+  u, update <package>     Update a package
+  up, upgrade             Upgrade all packages
+  r, remove <package>     Remove a package
+  p, peek <package>       Peek at package details
+  l, list                 List all installed packages
+  s, search <package>     Search for a package
+  c, clean                Clean the package cache
+  h, history              Show the package management history
+  config                  Edit configuration file
+  -h, --help              Display this help and exit
+  -v, --version           Output version information and exit
+
+${YELLOW}Report bugs to: $BUG_REPORT${NC}
+EOF
+}
+
+# Display version information
+display_version() {
+    print_rainbow "Package Manager Script v$VERSION"
+    print_color GREEN "Last Updated: $LAST_UPDATED"
+    print_color GREEN "Author: $AUTHOR"
+    print_color GREEN "GitHub: $GITHUB"
+}
+
+# Edit the configuration file
+edit_config() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        cat > "$CONFIG_FILE" << EOF
+# Package Manager Script Configuration
+
+# Preferred package manager (leave empty for auto-detection)
+PREFERRED_PACKAGE_MANAGER=""
+
+# Custom commands (leave empty to use defaults)
+CUSTOM_INSTALL_COMMAND=""
+CUSTOM_UPDATE_COMMAND=""
+CUSTOM_REMOVE_COMMAND=""
+CUSTOM_SEARCH_COMMAND=""
+
+# Use sudo for privileged operations (true/false)
+USE_SUDO=true
+EOF
+    fi
+
+    ${EDITOR:-nano} "$CONFIG_FILE"
+    print_color GREEN "Configuration updated. Please restart the script for changes to take effect."
+}
+
+# Main script logic
+case "$1" in
+    i|install) install_package "$2" ;;
+    u|update) update_package "$2" ;;
+    up|upgrade) upgrade_packages ;;
+    r|remove) remove_package "$2" ;;
+    p|peek) peek_package "$2" ;;
+    l|list) list_packages ;;
+    s|search) search_package "$2" ;;
+    c|clean) clean_cache ;;
+    h|history) show_history ;;
+    config) edit_config ;;
+    -h|--help) display_help ;;
+    -v|--version) display_version ;;
+    *)
+        print_color RED "Invalid option. Use -h or --help for usage information."
+        exit 1
+        ;;
+esac

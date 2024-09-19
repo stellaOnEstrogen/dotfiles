@@ -1,0 +1,183 @@
+#!/bin/bash
+
+# Desktop File Script
+#
+# This script generates desktop files for applications.
+# It allows users to customize desktop files for applications.
+#
+# Usage:
+#   ./desktop-file                   - Load the main menu
+#   ./desktop-file -h, --help        - Display help information
+#   ./desktop-file -v, --version     - Display version information
+#
+# Author: Stella <stellaonestrogen@gmail.com>
+# Version: 1.0
+# Last Updated: 19/9/2024 05:33 AM JST (GMT+9, Tokyo)
+
+# Variables
+VERSION="1.0"
+LAST_UPDATED="19/9/2024 05:33 AM JST (GMT+9, Tokyo)"
+AUTHOR="Stella <stellaonestrogen@gmail.com>"
+GITHUB="https://github.com/stellaOnEstrogen/dotfiles"
+BUG_REPORT="https://github.com/stellaOnEstrogen/dotfiles/issues"
+
+# Functions
+
+verify_type() {
+    local type=$1
+    local type_expected=$2
+
+    case "$type_expected" in
+        bool)
+            if [[ "$type" == "true" || "$type" == "false" ]]; then
+                return 0
+            else
+                echo "Error: Expected boolean (true/false), got '$type'"
+                return 1
+            fi
+            ;;
+        int)
+            if [[ "$type" =~ ^[0-9]+$ ]]; then
+                return 0
+            else
+                echo "Error: Expected integer, got '$type'"
+                return 1
+            fi
+            ;;
+        string)
+            if [[ -n "$type" ]]; then
+                return 0
+            else
+                echo "Error: Expected non-empty string"
+                return 1
+            fi
+            ;;
+        *)
+            echo "Error: Unknown type expected '$type_expected'"
+            return 1
+            ;;
+    esac
+}
+
+mk_desktop_file() {
+    local name=$1
+    local exec_path=$2
+    local icon_path=$3
+    local terminal=$4
+    local categories=$5
+    
+    if [ -z "$name" ] || [ -z "$exec_path" ] || [ -z "$icon_path" ]; then
+        echo "Error: Missing arguments."
+        return 1
+    fi
+
+    verify_type "$terminal" "bool" || return 1
+    
+    local desktop_file="$HOME/.local/share/applications/${name}.desktop"
+    
+    cat > "$desktop_file" << EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=$name
+Exec=$exec_path
+Icon=$icon_path
+Terminal=$terminal
+Categories=$categories
+EOF
+
+    echo "Desktop file created: $desktop_file"
+}
+
+# Main Menu
+main_menu() {
+    while true; do
+        echo "Desktop File Generator"
+        echo "1. Create new desktop file"
+        echo "2. Edit existing desktop file"
+        echo "3. Delete desktop file"
+        echo "4. Exit"
+        read -p "Choose an option: " choice
+
+        case $choice in
+            1) create_desktop_file ;;
+            2) edit_desktop_file ;;
+            3) delete_desktop_file ;;
+            4) exit 0 ;;
+            *) echo "Invalid option. Please try again." ;;
+        esac
+    done
+}
+
+# Create desktop file
+create_desktop_file() {
+    read -p "Enter application name: " name
+    read -p "Enter executable path: " exec_path
+    read -p "Enter icon path: " icon_path
+    read -p "Run in terminal? (true/false): " terminal
+    read -p "Enter categories (semicolon-separated): " categories
+
+    mk_desktop_file "$name" "$exec_path" "$icon_path" "$terminal" "$categories"
+}
+
+# Edit desktop file
+edit_desktop_file() {
+    local desktop_files_dir="$HOME/.local/share/applications"
+    
+    # Use newline as delimiter instead of spaces
+    IFS=$'\n'
+    local files=($(ls "$desktop_files_dir"/*.desktop))
+    
+    if [ ${#files[@]} -eq 0 ]; then
+        echo "No desktop files found."
+        return
+    fi
+
+    echo "Select a desktop file to edit:"
+    for i in "${!files[@]}"; do
+        echo "$((i+1)). $(basename "${files[$i]}")"
+    done
+
+    read -p "Enter the number of the file to edit: " file_num
+    if [[ "$file_num" =~ ^[0-9]+$ ]] && [ "$file_num" -ge 1 ] && [ "$file_num" -le "${#files[@]}" ]; then
+        ${EDITOR:-nano} "${files[$((file_num-1))]}"
+    else
+        echo "Invalid selection."
+    fi
+    unset IFS
+}
+
+
+
+# Delete desktop file
+delete_desktop_file() {
+    local desktop_files_dir="$HOME/.local/share/applications"
+    
+    # Use newline as delimiter instead of spaces
+    IFS=$'\n'
+    local files=($(ls "$desktop_files_dir"/*.desktop))
+    
+    if [ ${#files[@]} -eq 0 ]; then
+        echo "No desktop files found."
+        return
+    fi
+
+    echo "Select a desktop file to delete:"
+    for i in "${!files[@]}"; do
+        echo "$((i+1)). $(basename "${files[$i]}")"
+    done
+
+    read -p "Enter the number of the file to delete: " file_num
+    if [[ "$file_num" =~ ^[0-9]+$ ]] && [ "$file_num" -ge 1 ] && [ "$file_num" -le "${#files[@]}" ]; then
+        rm "${files[$((file_num-1))]}"
+        echo "File deleted: ${files[$((file_num-1))]}"
+    else
+        echo "Invalid selection."
+    fi
+    unset IFS
+}
+
+
+
+# Run the main menu
+main_menu

@@ -1,0 +1,288 @@
+#!/bin/bash
+
+# Password Generator Script
+#
+# This script generates secure passwords based on user-defined configurations.
+# It allows users to customize password length, character types, and other
+# security features. Users can save, load, and manage multiple configurations.
+#
+# Usage:
+#   ./pass-gen                   - Generate passwords using the last or default configuration
+#   ./pass-gen -c, --config      - Open the configuration menu
+#   ./pass-gen -g, --generate N  - Generate N passwords using current configuration
+#   ./pass-gen -l, --load NAME   - Load a specific configuration
+#   ./pass-gen -s, --save NAME   - Save current configuration with a specific name
+#   ./pass-gen -h, --help        - Display help information
+#   ./pass-gen -v, --version     - Display version information
+#
+# Author: Stella <stellaonestrogen@gmail.com>
+# Version: 1.0
+# Last Updated: 19/9/2024 05:33 AM JST (GMT+9, Tokyo)
+
+# Configuration paths
+base_dir="$HOME/.config/passwd-gen"
+config_dir="$base_dir/configs"
+default_config="$config_dir/default_config"
+last_config_file="$base_dir/last_config"
+
+# Variables
+VERSION="1.0"
+LAST_UPDATED="19/9/2024 05:33 AM JST (GMT+9, Tokyo)"
+AUTHOR="Stella <stellaonestrogen@gmail.com>"
+GITHUB="https://github.com/stellaOnEstrogen/dotfiles"
+BUG_REPORT="https://github.com/stellaOnEstrogen/dotfiles/issues"
+
+# Ensure config directory exists
+mkdir -p "$config_dir"
+
+# Default settings
+config_name="default"
+password_length=50
+quantity=5
+include_numbers=true
+include_lowercase=true
+include_uppercase=true
+include_symbols=true
+begin_with_letter=true
+no_similar=true
+no_duplicate=true
+no_sequential=true
+exclude_chars=""
+
+# Character sets
+numbers="23456789"
+lowercase="abcdefghjkmnpqrstuvwxyz"
+uppercase="ABCDEFGHJKMNPQRSTUVWXYZ"
+symbols="!\"#\$%&()*+,-./:;<=>?@[\\]^_\`{|}~"
+
+# Check for required dependencies
+for cmd in tr head; do
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "Error: $cmd is not installed. Please install it using your package manager."
+        exit 1
+    fi
+done
+
+# Function to update the character set based on user preferences
+update_characters() {
+    characters=""
+    $include_numbers && characters+="$numbers"
+    $include_lowercase && characters+="$lowercase"
+    $include_uppercase && characters+="$uppercase"
+    $include_symbols && characters+="$symbols"
+    
+    # Remove excluded characters
+    [[ -n "$exclude_chars" ]] && characters=$(tr -d "$exclude_chars" <<< "$characters")
+
+    # Remove similar characters if no_similar is true
+    $no_similar && characters=$(tr -d "1IlO0" <<< "$characters")
+}
+
+# Function to shuffle a string
+shuffle() {
+    LC_ALL=C tr -dc "$1" < /dev/urandom | head -c "$2"
+}
+
+# Function to check if a password contains sequential characters
+has_sequential() {
+    local pass=$1
+    local seq_length=3
+    for ((i=0; i<${#pass}-seq_length+1; i++)); do
+        local substr="${pass:$i:$seq_length}"
+        if [[ "$substr" =~ ([a-zA-Z0-9])\1{2,} ]]; then
+            return 0
+        fi
+        if [[ "$substr" =~ ([a-zA-Z])([a-zA-Z])([a-zA-Z]) ]]; then
+            local a=${BASH_REMATCH[1]}
+            local b=${BASH_REMATCH[2]}
+            local c=${BASH_REMATCH[3]}
+            if [[ $(( $(printf '%d' "'$b") - $(printf '%d' "'$a") )) == 1 && \
+                  $(( $(printf '%d' "'$c") - $(printf '%d' "'$b") )) == 1 ]]; then
+                return 0
+            fi
+        fi
+    done
+    return 1
+}
+
+# Function to generate a single password
+generate_password() {
+    local password
+    while true; do
+        password=$(shuffle "$characters" "$password_length")
+
+        if $begin_with_letter && [[ ! "$password" =~ ^[a-zA-Z] ]]; then
+            continue
+        fi
+
+        if $no_duplicate && [[ $(echo "$password" | grep -o . | sort | uniq -d | wc -l) -ne 0 ]]; then
+            continue
+        fi
+
+        if $no_sequential && has_sequential "$password"; then
+            continue
+        fi
+
+        break
+    done
+
+    echo "${password:0:$password_length}"
+}
+
+# Function to save the current configuration
+save_config() {
+    local config_file="$config_dir/$config_name"
+    {
+        echo "CONFIG_NAME=$config_name"
+        echo "password_length=$password_length"
+        echo "quantity=$quantity"
+        echo "include_numbers=$include_numbers"
+        echo "include_lowercase=$include_lowercase"
+        echo "include_uppercase=$include_uppercase"
+        echo "include_symbols=$include_symbols"
+        echo "begin_with_letter=$begin_with_letter"
+        echo "no_similar=$no_similar"
+        echo "no_duplicate=$no_duplicate"
+        echo "no_sequential=$no_sequential"
+        echo "exclude_chars=\"$exclude_chars\""
+    } > "$config_file"
+    echo "Configuration '$config_name' saved!"
+    echo "$config_name" > "$last_config_file"
+}
+
+# Function to load a configuration
+load_config() {
+    local config_file="$config_dir/$1"
+    if [ -f "$config_file" ]; then
+        source "$config_file"
+        echo "Configuration '$1' loaded!"
+        echo "$1" > "$last_config_file"
+    else
+        echo "Configuration '$1' not found. Using default settings."
+    fi
+    update_characters
+}
+
+# Function to list all saved configurations
+list_configs() {
+    echo "Saved configurations:"
+    ls -1 "$config_dir" | grep -v "^_$"
+}
+
+# Function to display and handle the configuration menu
+config_menu() {
+    local option
+    while true; do
+        clear
+        echo "Password Generator Configuration"
+        echo "Current Config: $config_name"
+        echo "Choose an option:"
+        echo "1) Password Length: $password_length"
+        echo "2) Quantity: $quantity"
+        echo "3) Include Numbers: $include_numbers"
+        echo "4) Include Lowercase Characters: $include_lowercase"
+        echo "5) Include Uppercase Characters: $include_uppercase"
+        echo "6) Include Symbols: $include_symbols"
+        echo "7) Begin With a Letter: $begin_with_letter"
+        echo "8) No Similar Characters (1, I, O, l): $no_similar"
+        echo "9) No Duplicate Characters: $no_duplicate"
+        echo "10) No Sequential Characters: $no_sequential"
+        echo "11) Exclude Specific Characters: $exclude_chars"
+        echo "12) Save Configuration"
+        echo "13) Load Configuration"
+        echo "14) List Configurations"
+        echo "15) Generate Sample Password"
+        echo "0) Exit"
+        read -p "Enter your choice: " option
+        
+        case $option in
+            1) read -p "Enter Password Length: " password_length ;;
+            2) read -p "Enter Quantity: " quantity ;;
+            3) read -p "Include Numbers? (true/false): " include_numbers ;;
+            4) read -p "Include Lowercase Characters? (true/false): " include_lowercase ;;
+            5) read -p "Include Uppercase Characters? (true/false): " include_uppercase ;;
+            6) read -p "Include Symbols? (true/false): " include_symbols ;;
+            7) read -p "Begin With a Letter? (true/false): " begin_with_letter ;;
+            8) read -p "No Similar Characters (1, I, O, l)? (true/false): " no_similar ;;
+            9) read -p "No Duplicate Characters? (true/false): " no_duplicate ;;
+            10) read -p "No Sequential Characters? (true/false): " no_sequential ;;
+            11) read -p "Enter characters to exclude (no spaces): " exclude_chars ;;
+            12) read -p "Enter configuration name: " config_name && save_config ;;
+            13) read -p "Enter configuration name to load: " load_name && load_config "$load_name" ;;
+            14) list_configs && read -p "Press enter to continue..." ;;
+            15) update_characters && sample_password=$(generate_password) && echo "Sample Password: $sample_password" && read -p "Press enter to continue..." ;;
+            0) clear && return ;;
+            *) echo "Invalid option. Try again." && read -p "Press enter to continue..." ;;
+        esac
+        update_characters
+    done
+}
+
+# Function to generate multiple passwords
+generate_passwords() {
+    for ((i=1; i<=quantity; i++)); do
+        password=$(generate_password)
+        printf -- "----------------# %d of %d #----------------\n%s\n" "$i" "$quantity" "$password"
+    done
+}
+
+# Function to display help information
+display_help() {
+    cat << EOF
+Usage: $0 [OPTION]
+Generate secure passwords based on user-defined configurations.
+
+Options:
+  -c, --config            Open the configuration menu
+  -g, --generate N        Generate N passwords using current configuration
+  -l, --load NAME         Load a specific configuration
+  -s, --save NAME         Save current configuration with a specific name
+  -h, --help              Display this help and exit
+  -v, --version           Output version information and exit
+
+Report bugs to: $BUG_REPORT
+EOF
+}
+
+# Function to display version information
+display_version() {
+    echo "Password Generator v$VERSION"
+    echo "Last Updated: $LAST_UPDATED"
+    echo "Author: $AUTHOR"
+    echo "GitHub: $GITHUB"
+}
+
+# Load last used configuration or default if not found
+if [ -f "$last_config_file" ]; then
+    load_config "$(cat "$last_config_file")"
+else
+    load_config "default_config"
+fi
+
+# Main script execution
+case "$1" in
+    -c|--config)
+        config_menu
+        ;;
+    -g|--generate)
+        quantity="${2:-$quantity}"
+        generate_passwords
+        ;;
+    -l|--load)
+        load_config "$2"
+        generate_passwords
+        ;;
+    -s|--save)
+        config_name="$2"
+        save_config
+        ;;
+    -h|--help)
+        display_help
+        ;;
+    -v|--version)
+        display_version
+        ;;
+    *)
+        generate_passwords
+        ;;
+esac
