@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Screem (Simple Screenshot Tool) Script
+#
+# This script is a simple screenshot tool, providing a unified interface
+# for package management across different Linux distributions and macOS.
+#
+# Usage:
+#   ./screem -f  Fullscreen screenshot
+#   ./screem -s  Screenshot a selected area
+#   ./screem -d  Screenshot with a delay (default 5 seconds)
+#   ./screem -h  Show this help message
+#
+# Author: Stella <stellaonestrogen@gmail.com>
+# Version: 1.0
+# Last Updated: 1/10/2024 00:19 AM JST (GMT+9, Tokyo)
+
+# Directory to save screenshots
+SAVE_DIR=~/Pictures/Screenshots
+
+# Get the current date
+
+CURRENT_DATE=$(date +"%Y-%m-%d")
+
+# Create directory if it doesn't exist
+mkdir -p "$SAVE_DIR/$CURRENT_DATE"
+
+# Current date and time for filename
+TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+
+# Default screenshot file name
+FILENAME="$SAVE_DIR/$CURRENT_DATE/screenshot_$TIMESTAMP.png"
+
+# Function to show usage instructions
+usage() {
+    echo "Usage: $0 [option]"
+    echo "Options:"
+    echo "  -f  Fullscreen screenshot"
+    echo "  -s  Screenshot a selected area"
+    echo "  -d  Screenshot with a delay (default 5 seconds)"
+    echo "  -h  Show this help message"
+}
+
+# Parse command-line arguments
+case "$1" in
+    -f)
+        echo "Taking fullscreen screenshot..."
+        scrot "$FILENAME"
+        echo "Screenshot saved to: $FILENAME"
+        ;;
+    -s)
+        echo "Taking a screenshot of a selected area..."
+        scrot -s "$FILENAME"
+        echo "Screenshot saved to: $FILENAME"
+        ;;
+    -d)
+        DELAY="${2:-5}"  # Set delay, default is 5 seconds if not provided
+        echo "Taking screenshot in $DELAY seconds..."
+        scrot -d "$DELAY" "$FILENAME"
+        echo "Screenshot saved to: $FILENAME"
+        ;;
+    -h|*)
+        usage
+        ;;
+esac

@@ -1,0 +1,47 @@
+*{
+  text-color: @polar-2;
+  spacing: 0;
+  width: 30%;
+  height: 30%;
+  highlight: none;
+}
+
+entry, element-text selected, element-icon selected {
+    background-color: @polar-4;
+    text-color: @snow-3;
+    highlight: bold;
+}
+
+inputbar {
+  border: 0 0 1px 0;
+  children: [prompt,entry];
+}
+
+prompt {
+  text-color: @polar-1;
+  padding: 1% 0px 0px 1%;
+  border: 0 1px 0 0;
+}
+
+textbox {
+  background-color: #2E3440;
+  border: 0 0 1px 0;
+  border-color: #2E3440;
+}
+
+entry {
+  padding: 16;
+}
+
+listview {
+  cycle: false;
+  margin: 0 0 -1px 0;
+  scrollbar: false;
+}
+
+element-text, element-icon {
+    padding: 1% 1% 1% 1%;
+    size: 1.6%;
+    orientation: vertical;
+}
+
