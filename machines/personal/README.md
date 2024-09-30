@@ -6,7 +6,9 @@
 - [Applications](#applications)
   - [GNOME and GTK](./applications/gnome/README.md)
   - [Zsh](./applications/zsh/README.md)
-
+  - [i3](./applications/i3/README.md)
+  - [Polybar](./applications/polybar/README.md)
+  - [Rofi](./applications/rofi/README.md)
 
 ## System Information
 
@@ -37,3 +39,6 @@ Memory: 7014MiB / 31985MiB
 
 - [GNOME and GTK](./applications/gnome/README.md)
 - [Zsh](./applications/zsh/README.md)
+- [i3](./applications/i3/README.md)
+- [Polybar](./applications/polybar/README.md)
+- [Rofi](./applications/rofi/README.md)

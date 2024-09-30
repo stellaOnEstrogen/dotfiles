@@ -24,12 +24,16 @@ The repository is organized as follows:
   - [Applications](./machines/personal/README.md#applications)
     - [GNOME and GTK](./machines/personal/applications/gnome/README.md)
     - [Zsh](./machines/personal/applications/zsh/README.md)
+    - [i3](./machines/personal/applications/i3/README.md)
+    - [Polybar](./machines/personal/applications/polybar/README.md)
+    - [Rofi](./machines/personal/applications/rofi/README.md)
 
 ## Scripts
 
 - [pkg](./scripts/pkg/README.md): A unified package manager wrapper
 - [desktop-file](./scripts/desktop-file/README.md): Desktop file generator and manager
 - [pass-gen](./scripts/pass-gen/README.md): Secure password generator
+- [screem](./scripts/screem/README.md): A simple screenshot tool
 
 ## Getting Started
 
